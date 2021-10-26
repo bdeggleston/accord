@@ -149,6 +149,8 @@ public class Topology extends AbstractCollection<Shard>
     {
         // TODO: this can be done by divide-and-conquer splitting of the lists and recursion, which should be more efficient
         Shards.NodeInfo info = nodeLookup.get(on);
+        if (info == null)
+            return;
         int[] a = supersetRangeIndexes, b = info.supersetIndexes;
         int ai = 0, bi = 0;
         while (ai < a.length && bi < b.length)

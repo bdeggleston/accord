@@ -10,6 +10,8 @@ import com.google.common.collect.Sets;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+
 import static accord.Utils.shards;
 
 public class ReadTrackerTest
@@ -106,27 +108,23 @@ public class ReadTrackerTest
         [1, 2, 3] [2, 3, 4] [3, 4, 5]
          */
 
-        Assertions.assertEquals(Sets.newHashSet(ids[2]), responses.computeMinimalReadSet());
+        Assertions.assertEquals(Sets.newHashSet(ids[2]), responses.computeMinimalReadSetAndMarkInflight());
 
-        responses.recordInflightRead(ids[2]);
         assertResponseState(responses, false, false);
 
         responses.recordReadFailure(ids[2]);
         assertResponseState(responses, false, false);
 
-        Assertions.assertEquals(Sets.newHashSet(ids[1], ids[3]), responses.computeMinimalReadSet());
-        responses.recordInflightRead(ids[1]);
-        responses.recordInflightRead(ids[3]);
+        Assertions.assertEquals(Sets.newHashSet(ids[1], ids[3]), responses.computeMinimalReadSetAndMarkInflight());
         assertResponseState(responses, false, false);
 
         responses.recordReadFailure(ids[1]);
-        Assertions.assertEquals(Sets.newHashSet(ids[0]), responses.computeMinimalReadSet());
+        Assertions.assertEquals(Sets.newHashSet(ids[0]), responses.computeMinimalReadSetAndMarkInflight());
 
         responses.recordReadSuccess(ids[3]);
         assertResponseState(responses, false, false);
-        Assertions.assertEquals(Sets.newHashSet(ids[0]), responses.computeMinimalReadSet());
+        Assertions.assertEquals(Collections.emptySet(), responses.computeMinimalReadSetAndMarkInflight());
 
-        responses.recordInflightRead(ids[0]);
         responses.recordReadSuccess(ids[0]);
         assertResponseState(responses, true, false);
     }

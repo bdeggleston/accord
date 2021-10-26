@@ -59,7 +59,7 @@ class Execute extends CompletableFuture<Result> implements Callback<ReadReply>
         }
         else
         {
-            Set<Id> readSet = tracker.computeMinimalReadSet();
+            Set<Id> readSet = tracker.computeMinimalReadSetAndMarkInflight();
             for (Node.Id to : tracker.nodes())
             {
                 boolean read = readSet.contains(to);
@@ -67,7 +67,6 @@ class Execute extends CompletableFuture<Result> implements Callback<ReadReply>
                 if (read)
                 {
                     node.send(to, send, this);
-                    tracker.recordInflightRead(to);
                 }
                 else
                 {
@@ -121,23 +120,14 @@ class Execute extends CompletableFuture<Result> implements Callback<ReadReply>
             throwable.printStackTrace();
 
         tracker.recordReadFailure(from);
-        Set<Id> readFrom = tracker.computeMinimalReadSet();
+        Set<Id> readFrom = tracker.computeMinimalReadSetAndMarkInflight();
         if (readFrom == null)
         {
             Preconditions.checkState(tracker.hasFailed());
             completeExceptionally(throwable);
         }
         else
-            read(readFrom);
-    }
-
-    private void read(Collection<Id> to)
-    {
-        for (Id id : to)
-        {
-            tracker.recordInflightRead(id);
-            node.send(to, new ReadData(txnId, txn), this);
-        }
+            node.send(readFrom, new ReadData(txnId, txn), this);
     }
 
     static CompletionStage<Result> execute(Node instance, Agreed agreed)

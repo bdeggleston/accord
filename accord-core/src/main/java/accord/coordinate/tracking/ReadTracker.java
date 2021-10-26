@@ -4,6 +4,7 @@ import accord.local.Node.Id;
 import accord.topology.Shard;
 import accord.topology.Shards;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import java.util.*;
@@ -23,8 +24,8 @@ public class ReadTracker extends AbstractResponseTracker<ReadTracker.ReadShardTr
 
         public void recordInflightRead(Id node)
         {
-            ++contacted;
-            inflight.add(node);
+            if (inflight.add(node))
+                ++contacted;
         }
 
         public void recordReadSuccess(Id node)
@@ -63,7 +64,8 @@ public class ReadTracker extends AbstractResponseTracker<ReadTracker.ReadShardTr
         candidates = new ArrayList<>(shards.nodes());
     }
 
-    public void recordInflightRead(Id node)
+    @VisibleForTesting
+    void recordInflightRead(Id node)
     {
         forEachTrackerForNode(node, ReadShardTracker::recordInflightRead);
     }
@@ -103,7 +105,7 @@ public class ReadTracker extends AbstractResponseTracker<ReadTracker.ReadShardTr
      *
      * Returns null if the read cannot be completed.
      */
-    public Set<Id> computeMinimalReadSet()
+    public Set<Id> computeMinimalReadSetAndMarkInflight()
     {
         Set<ReadShardTracker> toRead = accumulate((tracker, accumulate) -> {
             if (!tracker.shouldRead())
@@ -132,6 +134,7 @@ public class ReadTracker extends AbstractResponseTracker<ReadTracker.ReadShardTr
             int i = candidates.size() - 1;
             Id node = candidates.get(i);
             nodes.add(node);
+            recordInflightRead(node);
             candidates.remove(i);
             forEachTrackerForNode(node, (tracker, ignore) -> toRead.remove(tracker));
         }
